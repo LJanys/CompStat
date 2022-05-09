@@ -1,0 +1,368 @@
+---
+title: "Problem Set 2"
+author: "Shiyu Sun, Krasimira Kirilova, Marcel Harald Wachter"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise 1
+### a) Simulate the data using the following values: $n = 1000$, $x_{0i} = 1 \ \forall i$, $x_{1i} \sim \mathcal{U}(18,60)$, $x_{2i} \sim \mathcal{B}(0.5)$, $\beta_0 = -2$, $\beta_1 = 0.1$, $\beta_2 = 1$
+```{r, echo = FALSE}
+rm(list = ls())
+```
+Load Packages
+```{r, message = FALSE}
+library(maxLik)
+library(latex2exp)
+```
+Set Seed
+```{r}
+set.seed(123)
+```
+Generate Variables
+```{r}
+n <- 1000
+
+x0 <- rep(1, n)
+x1 <- runif(n, min = 18, max = 60)
+x2 <- rbinom(n, size = 1, prob = 0.5)
+x <- cbind(x0, x1, x2)
+
+beta0 <- -2
+beta1 <- 0.1
+beta2 <- 1
+beta <- c(beta0, beta1, beta2)
+```
+Create Data
+```{r}
+pi_x <- (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+y <- rbinom(n, size = 1, prob = pi_x)
+data <- cbind(y, x, pi_x)
+dataframe <- data.frame(y = y, x0 = x0, x1 = x1, x2 = x2, pi_x = pi_x)
+head(data)
+```
+### b) Write down the likelihood function and the log-likelihood function in R as defined in the lecture.
+```{r}
+like <- prod((exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))^y * (1 - (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2))))^(1 - y))
+
+loglike <- sum(-y * log(1 + exp(-(x0 * beta0 + x1 * beta1 + x2 * beta2))) - (1 - y) * log(1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+```
+### c) Plot the likelihood function and the log-likelihood function for a range of values for the two parameters separately and show that they are maximized at the same value.
+
+For $\beta_0$
+```{r}
+like <- function(beta0) {
+  prod((exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))^y * (1 - (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2))))^(1 - y))
+}
+l <- Vectorize(like)
+
+loglike <- function(beta0) {
+  sum(-y * log(1 + exp(-(x0 * beta0 + x1 * beta1 + x2 * beta2))) - (1 - y) * log(1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+}
+ll <- Vectorize(loglike)
+
+l_curve <- curve(expr = l, from = -3, to = -1, n = 1000, xname = "beta0",
+                 xlab = TeX(r"($\beta_0$)"), ylab = "Likelihood",
+                 main = "Likelihood Function")
+l_max <- l_curve$x[which(l_curve$y==(max(l_curve$y)))]
+abline(v = l_max, col = "red", lty = 2)
+legend(x = "topright", legend = "Maximum", col = "red", lty = 2)
+l_max
+ll_curve <- curve(expr = ll, from = -3, to = -1, n = 1000, xname = "beta0",
+                  xlab = TeX(r"($\beta_0$)"), ylab = "Log-Likelihood",
+                  main = "Log-Likelihood Function")
+ll_max <- ll_curve$x[which(ll_curve$y==(max(ll_curve$y)))]
+abline(v = ll_max, col = "red", lty = 2)
+legend(x = "bottomright", legend = "Maximum", col = "red", lty = 2)
+ll_max
+```
+
+For $\beta_1$
+```{r}
+like <- function(beta1) {
+  prod((exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))^y * (1 - (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2))))^(1 - y))
+}
+l <- Vectorize(like)
+
+loglike <- function(beta1) {
+  sum(-y * log(1 + exp(-(x0 * beta0 + x1 * beta1 + x2 * beta2))) - (1 - y) * log(1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+}
+ll <- Vectorize(loglike)
+
+l_curve <- curve(expr = l, from = 0.05, to = 0.15, n = 1000, xname = "beta1",
+                 xlab = TeX(r"($\beta_1$)"), ylab = "Likelihood",
+                 main = "Likelihood Function")
+l_max <- l_curve$x[which(l_curve$y==(max(l_curve$y)))]
+abline(v = l_max, col = "red", lty = 2)
+legend(x = "topright", legend = "Maximum", col = "red", lty = 2)
+l_max
+ll_curve <- curve(expr = ll, from = 0.05, to = 0.15, n = 1000, xname = "beta1",
+                  xlab = TeX(r"($\beta_1$)"), ylab = "Log-Likelihood",
+                  main = "Log-Likelihood Function")
+ll_max <- ll_curve$x[which(ll_curve$y==(max(ll_curve$y)))]
+abline(v = ll_max, col = "red", lty = 2)
+legend(x = "bottomright", legend = "Maximum", col = "red", lty = 2)
+ll_max
+```
+
+For $\beta_2$
+```{r}
+like <- function(beta2) {
+  prod((exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))^y * (1 - (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2))))^(1 - y))
+}
+l <- Vectorize(like)
+
+loglike <- function(beta2) {
+  sum(-y * log(1 + exp(-(x0 * beta0 + x1 * beta1 + x2 * beta2))) - (1 - y) * log(1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+}
+ll <- Vectorize(loglike)
+
+l_curve <- curve(expr = l, from = 0, to = 2, n = 1000, xname = "beta2",
+                 xlab = TeX(r"($\beta_2$)"), ylab = "Likelihood",
+                 main = "Likelihood Function")
+l_max <- l_curve$x[which(l_curve$y==(max(l_curve$y)))]
+abline(v = l_max, col = "red", lty = 2)
+legend(x = "topright", legend = "Maximum", col = "red", lty = 2)
+l_max
+ll_curve <- curve(expr = ll, from = 0, to = 2, n = 1000, xname = "beta2",
+                  xlab = TeX(r"($\beta_2$)"), ylab = "Log-Likelihood",
+                  main = "Log-Likelihood Function")
+ll_max <- ll_curve$x[which(ll_curve$y==(max(ll_curve$y)))]
+abline(v = ll_max, col = "red", lty = 2)
+legend(x = "bottomright", legend = "Maximum", col = "red", lty = 2)
+ll_max
+```
+
+### d) Estimate $\beta_0$, $\beta_1$, $\beta_2$ via maximum likelihood and calculate the standard errors. Use the estimation template provided in the lecture.
+```{r}
+loglike <- function(beta) {
+  ll <- sum(-y * log(1 + exp(-(x %*% beta))) - (1 - y) * log(1 + exp(x %*% beta)))
+}
+estim <- maxBFGS(loglike, finalHessian = TRUE, start = c(0, 1, 1))
+estim_par <- estim$estimate
+estim_par
+
+estim_hess <- estim$hessian
+cov <- -(solve(estim_hess))
+sde <- sqrt(diag(cov))
+sde
+
+logit <- glm(formula = y ~ x0 + x1 + x2 - 1, family = "binomial", data = dataframe)
+summary(logit)
+```
+
+### e) Propose and calculate a suitable method for the interpretation of the coefficients as discussed in the lecture.
+```{r}
+x1 <- sort(runif(n, min = 18, max = 60))
+x2 <- 0
+dx1 <- c()
+
+for (i in 1:n) {
+  pi <- exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2) / (1 + exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2))
+  dx1[i] <- estim_par[2] * (pi) * (1 - pi)
+}
+par(mar = c(5.1, 5.5, 4.1, 2.1))
+plot(x = x1, y = dx1, type = "l", xlab = TeX(r"($x_1$)"),
+     ylab = TeX(r"($\frac{\partial \pi}{\partial x_1}$)"),
+     main = TeX(r"(Marginal Effects of $x_1$ on $\pi$)"))
+
+x2 <- 1
+for (i in 1:n) {
+  pi <- exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2) / (1 + exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2))
+  dx1[i] <- estim_par[2] * (pi) * (1 - pi)
+}
+lines(x = x1, y = dx1, col = "red")
+legend(x = "topright", legend = TeX(c(r"($x_2 = 0$)", r"($x_2 = 1$)")),
+       lty = c(1, 1), col = c(1, 2))
+```
+
+```{r}
+x2 <- 0
+pi <- c()
+for (i in 1:n) {
+  pi[i] <- exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2) / (1 + exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2))
+}
+plot(x = x1, y = pi, type = "l", xlab = TeX(r"($x_1$)"), ylab = "Probability",
+     main = "Probability of y")
+
+x2 <- 1
+for (i in 1:n) {
+  pi[i] <- exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2) / (1 + exp(estim_par[1] + estim_par[2] * x1[i] + estim_par[3] * x2))
+}
+lines(x = x1, y = pi, col = "red")
+legend(x = "bottomright", legend = TeX(c(r"($x_2 = 0$)", r"($x_2 = 1$)")),
+       lty = c(1, 1), col = c(1, 2))
+```
+
+### f) Visualize your results, including the associated uncertainty around the estimates.
+```{r}
+model <- glm(formula = y ~ x0 + x1 + x2 - 1, family = "binomial", data = dataframe)
+
+x_to_visualize <- sort(x1)
+
+plot_confidence_itervals <- function(x2, xlab) {
+  probs <- predict(model, newdata = data.frame(x0 = x0, x1 = x_to_visualize, x2 = x2),
+                   type = "response", se.fit = TRUE)
+  
+  probs_fit <- probs$fit
+  probs_upper <- probs$fit + probs$se.fit * 1.96 # 95% confidence interval
+  probs_lower <- probs$fit - probs$se.fit * 1.96 # 95% confidence interval
+  
+  plot(x1, y, pch = 16, cex = 1, ylab="Probability", xlab = xlab,
+       main = "Probability of y with 95% Confidence Interval")
+  grid()
+  polygon(c(rev(x_to_visualize), x_to_visualize),
+          c(rev(probs_lower), probs_upper), col="grey90", border=NA)
+  
+  lines(x_to_visualize, probs_fit, lwd=2)
+  lines(x_to_visualize, probs_upper, lwd=2, col="red")
+  lines(x_to_visualize, probs_lower, lwd=2, col="red")
+  
+  abline(h=0.1, lty=2)
+  abline(h=0.5, lty=2)
+  abline(h=0.9, lty=2)
+}
+```
+```{r}
+plot_confidence_itervals(x2=0, xlab = TeX(r"($x_1$ $(x_2 = 0)$)"))
+plot_confidence_itervals(x2=1, xlab = TeX(r"($x_1$ $(x_2 = 1)$)"))
+```
+
+## Exercise 2
+### a) Calculate the average training and the average prediction error for 100 simulation runs.
+Set Seed
+```{r}
+set.seed(456)
+```
+Generate Test Variables
+```{r}
+n_test <- 1000
+
+x0_test <- rep(1, n_test)
+x1_test <- runif(n_test, min = 18, max = 60)
+x2_test <- rbinom(n_test, size = 1, prob = 0.5)
+x_test <- cbind(x0_test, x1_test, x2_test)
+```
+Create Test Data
+```{r}
+pi_x_test <- (exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2) / (1 + exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2)))
+y_test <- rbinom(n_test, size = 1, prob = pi_x_test)
+data_test <- cbind(y_test, x_test, pi_x_test)
+dataframe_test <- data.frame(y = y_test, x0 = x0_test, x1 = x1_test, x2 = x2_test, pi_x_test = pi_x_test)
+```
+Average Training Error
+```{r}
+mse <- 1 / n_test * sum((y_test - pi_x_test)^2)
+```
+Average Prediction Error
+```{r}
+ape <- mean((y_test - pi_x_test)^2)
+```
+
+Simulations
+```{r}
+set.seed(2198)
+ape_cont <- c()
+mse_cont <- c()
+beta0 <- -2
+beta1 <- 0.1
+beta2 <- 1
+for (i in 1:100) {
+  n <- 1000
+  x0 <- rep(1, n)
+  x1 <- runif(n, min = 18, max = 60)
+  x2 <- rbinom(n, size = 1, prob = 0.5)
+  x <- cbind(x0, x1, x2)
+  pi_x <- (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+  y <- rbinom(n, size = 1, prob = pi_x)
+  
+  model <- glm(formula = y ~ x0 + x1 + x2 - 1, family = "binomial")
+  beta0_train <- model$coefficients[1]
+  beta1_train <- model$coefficients[2]
+  beta2_train <- model$coefficients[3]
+  
+  pi_x_train <- (exp(x0 * beta0_train + x1 * beta1_train + x2 * beta2_train) / (1 + exp(x0 * beta0_train + x1 * beta1_train + x2 * beta2_train)))
+  y_train <- rbinom(n = n, size = 1, prob = pi_x_train)
+  
+  n_test <- 1000
+  x0_test <- rep(1, n_test)
+  x1_test <- runif(n_test, min = 18, max = 60)
+  x2_test <- rbinom(n_test, size = 1, prob = 0.5)
+  x_test <- cbind(x0_test, x1_test, x2_test)
+  
+   pi_x_test <- (exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2) / (1 + exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2)))
+  y_test <- rbinom(n_test, size = 1, prob = pi_x_test)
+  
+  pi_x_test_pred <- (exp(x0_test * beta0_train + x1_test * beta1_train + x2_test * beta2_train) / (1 + exp(x0_test * beta0_train + x1_test * beta1_train + x2_test * beta2_train)))
+  y_test_pred <- rbinom(n_test, size = 1, prob = pi_x_test_pred)
+  
+  mse_cont[i] <- 1 / n * sum(!(y == y_train))
+  ape_cont[i] <- 1 / n_test * sum(!(y_test == y_test_pred))
+}
+```
+Plot Errors
+```{r}
+plot(mse_cont, xlab = "Number of Simulation", ylab = "Error")
+points(ape_cont, col = "red")
+abline(h = mean(mse_cont))
+abline(h = mean(ape_cont), col = "red")
+legend(x = "topleft", legend = c("APE", "MSE"), lty = c(1, 1), col = c("red", "black"))
+```
+
+### b) Consider the way the data is generated: propose and implement a change in the data generating process that (by your conjecture) will lead to an increase in the test error rate, but a decrease in the training error rate.
+```{r}
+set.seed(2198)
+ape_cont <- c()
+mse_cont <- c()
+beta0 <- -2
+beta1 <- 0.1
+beta2 <- 1
+for (i in 1:100) {
+  n <- 100
+  x0 <- rep(1, n)
+  x1 <- runif(n, min = 18, max = 60)
+  x2 <- rbinom(n, size = 1, prob = 0.5)
+  x <- cbind(x0, x1, x2)
+  pi_x <- (exp(x0 * beta0 + x1 * beta1 + x2 * beta2) / (1 + exp(x0 * beta0 + x1 * beta1 + x2 * beta2)))
+  y <- rbinom(n, size = 1, prob = pi_x)
+  
+  model <- glm(formula = y ~ x0 + x1 + x2 - 1, family = "binomial")
+  beta0_train <- model$coefficients[1]
+  beta1_train <- model$coefficients[2]
+  beta2_train <- model$coefficients[3]
+  
+  pi_x_train <- (exp(x0 * beta0_train + x1 * beta1_train + x2 * beta2_train) / (1 + exp(x0 * beta0_train + x1 * beta1_train + x2 * beta2_train)))
+  y_train <- rbinom(n = n, size = 1, prob = pi_x_train)
+  
+  n_test <- 1000
+  x0_test <- rep(1, n_test)
+  x1_test <- runif(n_test, min = 18, max = 60)
+  x2_test <- rbinom(n_test, size = 1, prob = 0.2)
+  x_test <- cbind(x0_test, x1_test, x2_test)
+  
+   pi_x_test <- (exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2) / (1 + exp(x0_test * beta0 + x1_test * beta1 + x2_test * beta2)))
+  y_test <- rbinom(n_test, size = 1, prob = pi_x_test)
+  
+  pi_x_test_pred <- (exp(x0_test * beta0_train + x1_test * beta1_train + x2_test * beta2_train) / (1 + exp(x0_test * beta0_train + x1_test * beta1_train + x2_test * beta2_train)))
+  y_test_pred <- rbinom(n_test, size = 1, prob = pi_x_test_pred)
+  
+  mse_cont[i] <- 1 / n * sum(!(y == y_train))
+  ape_cont[i] <- 1 / n_test * sum(!(y_test == y_test_pred))
+}
+```
+Plot Errors
+```{r}
+plot(mse_cont, xlab = "Number of Simulation", ylab = "Error")
+points(ape_cont, col = "red")
+abline(h = mean(mse_cont))
+abline(h = mean(ape_cont), col = "red")
+legend(x = "bottomright", legend = c("APE", "MSE"), lty = c(1, 1), col = c("red", "black"))
+```
+
+### c) Bonus: Consider your assignment in 1 c): propose changes in the data generating process above that would make the likelihood function less informative over the range of parameter values. Implement these changes and show your results graphically.
