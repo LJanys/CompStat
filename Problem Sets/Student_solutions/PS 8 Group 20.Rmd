@@ -1,0 +1,304 @@
+---
+title: "R Problem Set 8 Comp Stats-Group 20"
+output: html_notebook
+---
+
+
+```{r Load the libraries}
+library(caret)
+library(gains)
+library(rpart)
+library(rpart.plot)
+library(pROC)
+library(randomForest)
+library(tree)
+library(ISLR)
+library(mvtnorm)
+library(MASS)
+library(gbm)
+library(xgboost)
+
+```
+```{r EXERCISE 1 }
+
+rm(list=ls())
+set.seed(123)
+
+
+
+n <- 500
+p <- 3
+eps_sd<- sqrt(10)
+
+
+```
+```{Data Generating Process}
+```
+
+
+```{r Data Generating process}
+eps <- rnorm(n, 0, eps_sd)
+
+x1 <- rnorm (n,0,0.5)
+x2 <- rnorm (n,0,1)
+x3 <- rnorm (n,0,1.2)
+X <- cbind (x1,x2,x3)
+Y <- (x1+x2^2+x3^3+eps > 0)*1
+
+plot(x1,Y)
+plot(x2,Y)
+plot(x3,Y)
+
+
+```
+```{r Training and Testing data}
+Y_fac <- as.factor(Y)
+dgp_fac= data.frame(X,Y_fac)
+
+train = sample(1:n, n*0.5)
+
+test = -train
+
+training_data = dgp_fac[train,]  #train_x
+testing_data = dgp_fac[test,]   #test_x
+testing_outcome = dgp_fac$Y_fac[test] #test_y
+training_outcome = dgp_fac$Y_fac[train] #train_y
+
+X_train = data.matrix(training_data[,-4])                  # independent variables for train
+##y_train = training_data[,4]                                # dependent variables for train
+
+X_test = data.matrix(testing_data[,-4])                    # independent variables for test
+##y_test = testing_data[,4] 
+
+
+```
+```{r Classification Tree}
+Classification_tree = rpart(Y_fac ~ ., data = training_data, method ="class", cp = 0)
+summary(Classification_tree)
+
+
+rpart.plot(Classification_tree)
+
+predict_class_tree <- predict(Classification_tree,testing_data, type = 'class')
+Y_factor <- as.factor(Y_fac)
+confusionMatrix(predict_class_tree, testing_data$Y_fac)
+```
+
+
+```{r Pruned Tree}
+prune_tree <- prune(Classification_tree , cp = 0.02)
+summary(prune_tree)
+prp(prune_tree, type = 1, extra = 1, under = TRUE)
+
+
+rpart.plot(prune_tree)
+printcp(prune_tree)
+
+predict_prune_tree <- predict(prune_tree,testing_data, type = 'class')
+
+Y_factor <- as.factor(Y_fac)
+
+confusionMatrix(predict_prune_tree, testing_data$Y_fac)
+```
+
+
+```{r Boosting}
+training_data$Y_fac <- as.character(training_data$Y_fac)
+testing_data$Y_fac <- as.character(testing_data$Y_fac)
+
+#dgp_boost <- gbm(Y_fac ~ . , data= training_data , distribution = "bernoulli" , interaction.depth = 4 , n.trees = 5000 ,shrinkage = 0.2 , verbose = F)
+
+#print(dgp_boost)
+## convert train and test data into xgboost data matrix 
+
+dgp_boost_train = xgb.DMatrix(data=X_train, label=training_outcome)
+dgp_boost_test = xgb.DMatrix(data=X_test, label=testing_outcome)
+```
+
+
+```{r Boosting grid}
+tr <- trainControl(method = "repeatedcv",
+                   number = 10,
+                   repeats = 5)
+
+tg <- expand.grid(shrinkage = seq(0.1, 1, by = 0.2), 
+                  interaction.depth = c(1, 3, 7, 10),
+                  n.minobsinnode = c(2, 5),
+                  n.trees = c(100, 300, 500))
+
+gbm1<- train(Y_fac ~., data = training_data, 
+             method = "gbm", trControl = tr, tuneGrid =tg, verbose = FALSE)
+plot(gbm1)
+```
+
+
+```{r xgboost}
+xg_boost <- xgboost(data = dgp_boost_train,                       
+                    max.depth= 2, eta = 0.3,                         
+                    nrounds=10)
+#summary(xg_boost)
+
+
+
+#use model to make predictions on test data
+dgp_boost_predict = predict(xg_boost, dgp_boost_test)
+
+dgp_boost_predict
+
+
+pred_y = as.factor((levels(testing_outcome))[round(dgp_boost_predict)])
+print(pred_y)
+#dgp_boost_predict <- predict(dgp_boost, training_data, n.trees = 250)
+
+#### or we can also use thw error funtion-
+#c_error = RMSE(testing_data[,4], predict(xg_boost, testing_data[,1:3]))
+#print(c_error)
+
+CM_boost <- confusionMatrix(testing_outcome , pred_y)
+print(CM_boost)
+```
+
+
+```{r EXERCISE 2}
+
+## Question 2a#### 
+
+
+rm(list = ls())
+
+library(caret)
+library(xgboost)
+library(mvtnorm)
+library(gbm)
+
+set.seed (666)
+cov_mat_corr <- function(m) {
+  A <- matrix(runif(m^2)*2-1, ncol=m) 
+  Sigma <- t(A) %*% A
+  return(Sigma)
+}
+
+n <- 500
+p <- 3
+
+eps_sd<- sqrt(10)
+beta<-c(3,4,5)
+
+covvarmat <- cov_mat_corr(p)
+
+```
+```{r Training and testing new data}
+# Generate data, working with three predictors only!
+eps <- rnorm(n, 0, eps_sd)
+x = matrix(rmvnorm(n, rep(0,p), covvarmat), ncol = p )
+#y = matrix(x[,1] + x[,2]**2 +  x[,3]**3 + x[,3]*x[,2] + eps > 0 )*1
+y= matrix(x[,1]^beta[1] + x[,2]^beta[2]+ x[,3]^beta[3] + eps > 0)*1
+data_full = cbind(x, y)
+
+y_fac<- as.factor(y)
+new_dgp_fac= data.frame(x,y_fac)
+
+train = sample(1:n, n*0.5)
+
+test = -train
+
+training_data2 = new_dgp_fac[train,]  #train_x
+testing_data2 = new_dgp_fac[test,]   #test_x
+testing_outcome2 = new_dgp_fac$y_fac[test] #test_y
+training_outcome2 = new_dgp_fac$y_fac[train] #train_y
+
+X_train2 = data.matrix(training_data2[,-4])                  # independent variables for train
+##y_train = training_data[,4]                                # dependent variables for train
+
+X_test2 = data.matrix(testing_data2[,-4])                    # independent variables for test
+##y_test = testing_data[,4]
+```
+
+
+```{r Boosting new dgp}
+dgp_boost_train2 = xgb.DMatrix(data=X_train2, label=training_outcome2)
+dgp_boost_test2 = xgb.DMatrix(data=X_test2, label=testing_outcome2)
+```
+
+
+```{r Boosting new dgp grid}
+tr <- trainControl(method = "repeatedcv",
+                   number = 10,
+                   repeats = 5)
+
+tg <- expand.grid(shrinkage = seq(0.1, 1, by = 0.2), 
+                  interaction.depth = c(1, 3, 7, 10),
+                  n.minobsinnode = c(2, 5),
+                  n.trees = c(100, 300, 500))
+
+gbm1<- train(y_fac ~., data = training_data2, 
+             method = "gbm", trControl = tr, tuneGrid =tg, verbose = FALSE)
+plot(gbm1)
+```
+
+
+```{r Boosting new dgp xgboost }
+### For model with beta and cov matrix 
+xg_boost2 <- xgboost(dgp_boost_train2,
+                    nround = 10 ,
+                    max.depth=2 , eta =0.3)
+```
+
+
+```{r Boosting new dgp Prediction}
+dgp_boost_predict2 = predict(xg_boost2, dgp_boost_test2)
+
+dgp_boost_predict2
+
+
+pred_y2 = as.factor((levels(testing_outcome2))[round(dgp_boost_predict2)])
+print(pred_y2)
+
+CM_boost2 <- confusionMatrix(testing_outcome2 , pred_y2)
+print(CM_boost2)
+```
+
+
+```{r Classification tree with new data}
+Classification_tree2 = rpart(y_fac ~ ., data = training_data2, method ="class")
+summary(Classification_tree2)
+
+rpart.plot(Classification_tree2)
+## predicting the test data on the training data 
+
+predict_class_tree2 <- predict(Classification_tree2,testing_data2, type = 'class')
+
+#To check the error -
+CM_Classification <- confusionMatrix(predict_class_tree2, testing_data2$y_fac)
+print(CM_Classification)
+```
+
+
+```{r Question 2b Random Forest}
+testing_data2 = new_dgp_fac[test,]   #test_x
+#as.character((testing_data$y_fac))
+Random_forest <- randomForest(as.factor(y_fac) ~ ., 
+                              data =training_data2,importance = TRUE,
+                              proximity = TRUE) 
+Random_forest
+#plot(Random_forest)
+```
+
+
+```{r Random Forest Prediction}
+pred_vote <- predict(Random_forest, type = "response")
+
+pred_vote
+Correct <- pred_vote == training_data2$y_fac
+data.frame(Predicted = pred_vote, Actual = training_data2$y_fac, Correct)
+
+pred_table <- table(Predicted = pred_vote, Actual = training_data2$y_fac)
+addmargins(pred_table)
+
+head(predict(Random_forest, type = "prob", newdata = testing_data2))
+testing_data2$pred_vote <- predict(Random_forest, type = "class", newdata = testing_data2)
+
+pred_table_test <- table(Observed = testing_data2$y_fac, predicted = testing_data2$pred_vote)
+addmargins(pred_table_test)
+
+```
