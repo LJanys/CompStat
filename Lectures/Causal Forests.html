@@ -14014,7 +14014,7 @@ a.anchor-link {
 <p>The problem: in order to calculate the ATE we would need <strong>potential</strong> outcomes, but we only have <strong>observed</strong> outcomes.</p>
 <p><strong>Comparing Observed Outcomes</strong>
 $$Y_i=Y_{0i}+(Y_{1i}-Y_{0i})W_i $$</p>
-\begin{eqnarray*} \underset{\mbox{ Observed Differences in Earnings}}{\mathbb{E}[Y_{i}|W=1]-\mathbb{E}[Y_i|W=0]}&amp;=&amp;\underset{\mbox{ Average treatment effect on the treated}}{\mathbb{E}[Y_{1i}-Y_{0i}|W=1]}\\ &amp;-&amp;\underset{\mbox{ Selection Bias}}{\mathbb{E}[Y_{0i}|W=1]-\mathbb{E}[Y_{0i}|W=0]}\end{eqnarray*}<p>A sufficient condition for a standard estimator comparing observed outcomes to consistently estimate the ATE is</p>
+\begin{eqnarray*} \underset{\mbox{ Observed Differences in Earnings}}{\mathbb{E}[Y_{i}|W=1]-\mathbb{E}[Y_i|W=0]}&amp;=&amp;\underset{\mbox{ Average treatment effect on the treated}}{\mathbb{E}[Y_{1i}-Y_{0i}|W=1]}\\ &amp;+&amp;\underset{\mbox{ Selection Bias}}{\mathbb{E}[Y_{0i}|W=1]-\mathbb{E}[Y_{0i}|W=0]}\end{eqnarray*}<p>A sufficient condition for a standard estimator comparing observed outcomes to consistently estimate the ATE is</p>
 $$\mathbb{E}[Y_1|W=1]=\mathbb{E}[Y_1|W=0]=\mathbb{E}[Y_1]$$<p>in words: the mean potential outcome under treatment  for those in the treatment group equals the mean potential outcome under treatment for those in the control group.</p>
 <p>s</p>
 $$\mathbb{E}[Y_0|W=1]=\mathbb{E}[Y_0|W=0]=\mathbb{E}[Y_0]$$<p>in words: the mean potential outcome under control for those in the treatment group equals the mean potential outcome under control for those in the control group, because then:</p>
